@@ -21,39 +21,6 @@ import { IAppInfo } from '@rocket.chat/apps-ts-definition/metadata';
 const url = 'https://memegen.link/api/templates/';
 const memeList: {title: string, url:string, name:string}[] = [];
 
-const generateMemeList = async function(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
-	const builder = modify.getCreator().startMessage().setSender(context.getSender()).setRoom(context.getRoom());
-
-	if (memeList.length === 0) {
-		const response = await http.get(url);
-		if (response.statusCode !== HttpStatusCode.OK || !response.data) {
-			this.app.getLogger().debug('Did not get a valid response', response);
-			builder.setText('Failed to retrieve meme list.');
-			modify.getNotifer().notifyUser(context.getSender(), builder.getMessage());
-			return;
-		}
-
-		for (const title in response.data) {
-			const templateUrl = response.data[title];
-			const templateName = templateUrl.replace(url, '');
-
-			memeList.push({
-				title,
-				url: templateUrl,
-				name: templateName
-			});
-		}
-	}
-
-	let lines = '';
-	memeList.forEach((template) => {
-		lines = `${ lines }*${ template.name }*: _${ template.title }_\n`;
-	});
-	builder.setText(lines);
-
-	modify.getNotifer().notifyUser(context.getSender(), builder.getMessage());
-}
-
 export class MemeAppCommand implements ISlashCommand {
 	public command: string;
 	public i18nDescription: string;
@@ -63,22 +30,17 @@ export class MemeAppCommand implements ISlashCommand {
 	constructor(private readonly app: App) {
 		this.command = 'meme';
 		this.i18nParamsExample = '';
-		this.i18nDescription = 'Generate a meme.';
+		this.i18nDescription = 'Generate a meme image.';
 		this.providesPreview = false;
 	}
 
 	public async executor(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
 		const args = context.getArguments();
-		if (args.length > 0 && args[0].trim().toLowerCase() === 'list') {
-			generateMemeList(context, read, modify, http, persis);
-			return;
-		}
-
 		const builder = modify.getCreator().startMessage().setSender(context.getSender()).setRoom(context.getRoom());
 
 		if (args.length < 2) {
 			this.app.getLogger().debug('Invalid arguments', args);
-			builder.setText('Invalid arguments');
+			builder.setText('Invalid arguments.\nUse the following format: `\/meme template top-line bottom-line`\nFor a list of available templates, run `\/meme-list`.');
 			modify.getNotifer().notifyUser(context.getSender(), builder.getMessage());
 			return;
 		}
@@ -94,7 +56,7 @@ export class MemeAppCommand implements ISlashCommand {
 		const response = await http.get(memeUrl);
 		if (response.statusCode !== HttpStatusCode.OK || !response.data) {
 			this.app.getLogger().debug('Did not get a valid response', response);
-			builder.setText('Invalid meme.');
+			builder.setText('Failed to generate meme image. Did you use a valid template?');
 			modify.getNotifer().notifyUser(context.getSender(), builder.getMessage());
 			return;
 		}
@@ -126,7 +88,31 @@ export class MemeListAppCommand implements ISlashCommand {
 	}
 
 	public async executor(context: SlashCommandContext, read: IRead, modify: IModify, http: IHttp, persis: IPersistence): Promise<void> {
-		generateMemeList(context, read, modify, http, persis);
+		const builder = modify.getCreator().startMessage().setSender(context.getSender()).setRoom(context.getRoom());
+
+		if (memeList.length === 0) {
+			const response = await http.get(url);
+			if (response.statusCode !== HttpStatusCode.OK || !response.data) {
+				this.app.getLogger().debug('Did not get a valid response', response);
+				builder.setText('Failed to retrieve the meme template list.');
+				modify.getNotifer().notifyUser(context.getSender(), builder.getMessage());
+				return;
+			}
+
+			for (const title in response.data) {
+				const templateUrl = response.data[title];
+				const templateName = templateUrl.replace(url, '');
+
+				memeList.push({
+					title,
+					url: templateUrl,
+					name: templateName
+				});
+			}
+		}
+
+		builder.setText(memeList.reduce((accumulator, template) =>  `${ accumulator }*${ template.name }*: _${ template.title }_\n`, ''));
+		modify.getNotifer().notifyUser(context.getSender(), builder.getMessage());
 	}
 }
 

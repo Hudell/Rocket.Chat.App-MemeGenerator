@@ -1,15 +1,15 @@
 {
     "id": "da0bc1a6-5c41-4e75-a576-197cf297c4d8",
-    "version": "1.0.0",
-    "requiredApiVersion": "^0.9.13",
+    "version": "1.0.1",
+    "requiredApiVersion": "0.9.13",
     "iconFile": "icon.png",
     "author": {
         "name": "Rocket.Chat Team",
         "homepage": "https://rocket.chat",
         "support": "https://rocket.chat"
     },
-    "name": "Meme",
+    "name": "Meme Generator",
     "nameSlug": "meme",
     "classFile": "MemeApp.ts",
-    "description": "Meme Generator"
+    "description": "Slash command to automatically generate meme images based on templates from the memegen.link website."
 }
